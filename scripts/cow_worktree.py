@@ -305,7 +305,7 @@ def add_worktree(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(prog="git cowtree", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     add = subparsers.add_parser("add", help="create a worktree with copy-on-write files")
     add.add_argument("--from", dest="source", help="source worktree to use")

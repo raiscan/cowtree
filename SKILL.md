@@ -1,5 +1,5 @@
 ---
-name: cow-git-worktree
+name: cowtree
 description: Use when creating a Git worktree and disk usage matters, especially when several worktrees share a large checkout on Linux or macOS.
 ---
 

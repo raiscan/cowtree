@@ -125,9 +125,16 @@ test_git_launcher_forwards_branch_flag() {
   assert_clean "$target"
 }
 
+test_git_launcher_uses_cowtree_help_name() {
+  local output
+  output=$(PATH="$BIN:$PATH" git cowtree -h)
+  assert_contains 'usage: git cowtree' "$output"
+}
+
 test_same_tree_uses_reflinks
 test_divergent_tree_checks_out_changed_files
 test_dirty_source_falls_back
 test_git_dispatches_to_launcher
 test_git_launcher_forwards_branch_flag
+test_git_launcher_uses_cowtree_help_name
 printf 'PASS: cow worktree behavior\n'

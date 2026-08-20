@@ -40,7 +40,7 @@ python3 scripts/cow_worktree.py add --verbose \
 ```
 
 The skill instructions are in [`SKILL.md`](SKILL.md). Install the repository
-as a user-scoped skill by cloning it into `~/.agents/skills/cow-git-worktree`,
+as a user-scoped skill by cloning it into `~/.agents/skills/cowtree`,
 then link that directory into the Claude and Codex skill paths if needed.
 
 ## Inspiration
