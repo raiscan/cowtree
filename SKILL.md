@@ -48,3 +48,9 @@ worktree index, and checks out everything that cannot be safely shared.
 | Optimized worktree | `python3 <skill-directory>/scripts/cow_worktree.py add --verbose TARGET COMMIT` |
 | Force source selection | Add `--from SOURCE` |
 | Ordinary fallback | `git worktree add TARGET COMMIT` |
+
+## Inspiration
+
+This skill was inspired by [`git-cow-worktree`](https://github.com/josharian/git-cow-worktree),
+created by [Josh Bleecher Snyder (`@josharian`)](https://github.com/josharian).
+The implementation here is independent and does not use code from that project.

@@ -28,6 +28,13 @@ The skill instructions are in [`SKILL.md`](SKILL.md). Install the repository
 as a user-scoped skill by cloning it into `~/.agents/skills/cow-git-worktree`,
 then link that directory into the Claude and Codex skill paths if needed.
 
+## Inspiration
+
+The copy-on-write worktree idea was inspired by [`git-cow-worktree`](https://github.com/josharian/git-cow-worktree),
+created by [Josh Bleecher Snyder (`@josharian`)](https://github.com/josharian).
+`cowtree` is an independent Python implementation for Claude Code and Codex;
+it does not use code from that project.
+
 ## Test
 
 ```sh
