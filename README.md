@@ -17,7 +17,22 @@ dependencies. Linux uses `cp --reflink=always`; macOS uses APFS clone support.
 
 ## Use
 
-Run the skill helper from a repository:
+Put the repository's `bin` directory on `PATH` to enable Git's subcommand
+dispatch:
+
+```sh
+export PATH="/path/to/cowtree/bin:$PATH"
+```
+
+Then use the familiar `git worktree add` shape:
+
+```sh
+git cowtree add ../repo-feature feature
+git cowtree add -b topic ../repo-topic main
+git cowtree add -v --from ../repo-main ../repo-topic topic
+```
+
+The underlying helper can also be run directly:
 
 ```sh
 python3 scripts/cow_worktree.py add --verbose \

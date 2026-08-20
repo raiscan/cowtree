@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Dispatch ``git cowtree`` to the bundled helper."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import sys
+
+
+helper = Path(__file__).resolve().parent.parent / "scripts" / "cow_worktree.py"
+os.execv(sys.executable, [sys.executable, str(helper), *sys.argv[1:]])

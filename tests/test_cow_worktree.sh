@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)/cow_worktree.py"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT="$REPO_ROOT/scripts/cow_worktree.py"
+BIN="$REPO_ROOT/bin"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -90,7 +92,42 @@ test_dirty_source_falls_back() {
   [[ $(cat "$target/file.txt") == committed ]] || fail 'fallback did not use committed content'
 }
 
+test_git_dispatches_to_launcher() {
+  local root source target output
+  root=$(mktemp -d)
+  trap 'rm -rf "$root"' RETURN
+  source=$root/source
+  target=$root/target
+  new_repo "$source"
+  printf 'launcher content\n' >"$source/file.txt"
+  git -C "$source" add .
+  git -C "$source" commit -q -m initial
+
+  output=$(cd "$source" && PATH="$BIN:$PATH" git cowtree add --verbose "$target" HEAD)
+  assert_contains 'reflinked=' "$output"
+  assert_clean "$target"
+  [[ $(cat "$target/file.txt") == 'launcher content' ]] || fail 'launcher content differs'
+}
+
+test_git_launcher_forwards_branch_flag() {
+  local root source target
+  root=$(mktemp -d)
+  trap 'rm -rf "$root"' RETURN
+  source=$root/source
+  target=$root/target
+  new_repo "$source"
+  printf 'branch content\n' >"$source/file.txt"
+  git -C "$source" add .
+  git -C "$source" commit -q -m initial
+
+  PATH="$BIN:$PATH" git cowtree add -b topic --from "$source" "$target" HEAD >/dev/null
+  [[ $(git -C "$target" branch --show-current) == topic ]] || fail 'branch flag was not forwarded'
+  assert_clean "$target"
+}
+
 test_same_tree_uses_reflinks
 test_divergent_tree_checks_out_changed_files
 test_dirty_source_falls_back
+test_git_dispatches_to_launcher
+test_git_launcher_forwards_branch_flag
 printf 'PASS: cow worktree behavior\n'

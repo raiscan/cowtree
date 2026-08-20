@@ -14,12 +14,12 @@ worktree index, and checks out everything that cannot be safely shared.
 1. Confirm the repository and target path. The target must not already exist.
 2. Prefer a clean existing worktree as the source. Pass it with `--from` when
    the choice matters; otherwise the helper chooses a clean nearby worktree.
-3. Run the helper from the repository, or provide `--from` when invoking it
-   from elsewhere:
+3. Put the skill's `bin` directory on `PATH` and use `git cowtree`, or invoke
+   the helper directly. Provide `--from` when the source matters:
 
    ```sh
-   python3 <skill-directory>/scripts/cow_worktree.py add \
-     --verbose --from /path/to/clean-source /path/to/new-worktree <commit-ish>
+   git cowtree add --verbose --from /path/to/clean-source \
+     /path/to/new-worktree <commit-ish>
    ```
 
    Add `-b <branch>` or `--detach` when needed. The helper supports those
@@ -45,7 +45,7 @@ worktree index, and checks out everything that cannot be safely shared.
 
 | Need | Command |
 | --- | --- |
-| Optimized worktree | `python3 <skill-directory>/scripts/cow_worktree.py add --verbose TARGET COMMIT` |
+| Optimized worktree | `git cowtree add --verbose TARGET COMMIT` |
 | Force source selection | Add `--from SOURCE` |
 | Ordinary fallback | `git worktree add TARGET COMMIT` |
 
