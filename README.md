@@ -33,6 +33,14 @@ git cowtree add -b topic ../repo-topic main
 git cowtree add -v --from ../repo-main ../repo-topic topic
 ```
 
+The native worktree creation flags are forwarded, including `-f`/`--force`,
+`--detach`, `--checkout`/`--no-checkout`, `--lock --reason`, `-b`/`-B`,
+`--orphan`, `--track`, `--guess-remote`, and `--relative-paths`. Omit the
+commit to retain Git's normal branch/default behavior. `--from` must name a
+clean worktree in the repository from which the command is run; an invalid
+source safely falls back to Git's normal checkout. Successful creation runs
+the repository's `post-checkout` hook with Git-compatible arguments.
+
 The underlying helper can also be run directly:
 
 ```sh

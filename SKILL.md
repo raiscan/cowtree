@@ -23,7 +23,10 @@ worktree index, and checks out everything that cannot be safely shared.
    ```
 
    Add `-b <branch>` or `--detach` when needed. The helper supports those
-   common creation modes; use ordinary `git worktree add` for other flags.
+   common creation modes and forwards Git's creation flags, including
+   `--force`, `-B`, `--lock --reason`, and `--orphan`; use ordinary
+   `git worktree add` for maintenance commands. Omit the commit to preserve
+   Git's native branch/default behavior.
 4. Verify `git -C /path/to/new-worktree status --short` is empty and inspect
    the helper's report. `fallback=no` means reflinks were used; `fallback=yes`
    means the helper deliberately completed a normal checkout for correctness.
@@ -39,6 +42,11 @@ worktree index, and checks out everything that cannot be safely shared.
   filesystem and the platform supports native reflinks. Linux uses native
   `FICLONE` when exposed by Python, with `cp --reflink=always` as a fallback;
   unsupported or cross-device cases must fall back to Git's normal checkout.
+- The invocation directory determines the repository. `--from` must identify
+  a clean worktree in that same repository; invalid or dirty sources fall back
+  safely to Git's normal checkout.
+- Successful creation runs `post-checkout` with Git-compatible arguments unless
+  `--no-checkout` was requested.
 - This optimization applies to creating a worktree only. Use Git directly for
   `list`, `lock`, `move`, `remove`, and other worktree maintenance commands.
 
