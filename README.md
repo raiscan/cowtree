@@ -1,6 +1,10 @@
-# cowtree
+<p align="center">
+  <img src="assets/cowtree-wide.png" alt="cowtree — copy-on-write Git worktrees" width="900">
+</p>
 
-Copy-on-write Git worktrees for Claude Code and Codex.
+<p align="center">
+  Copy-on-write Git worktrees for Claude Code and Codex.
+</p>
 
 `cowtree` creates a new worktree with Git's `--no-checkout` setup, reflinks
 unchanged tracked files from a clean existing worktree, refreshes the index,
