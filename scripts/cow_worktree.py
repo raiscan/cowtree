@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+import errno
 import os
 from pathlib import Path
 import platform
@@ -11,11 +13,22 @@ import shutil
 import stat
 import subprocess
 import sys
+import threading
 from dataclasses import dataclass
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Windows has no fcntl module.
+    fcntl = None
 
 
 class CowError(RuntimeError):
     pass
+
+
+FICLONE = getattr(fcntl, "FICLONE", None) if fcntl is not None else None
+_ficlone_disabled = False
+_ficlone_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -171,7 +184,7 @@ def reflink_command(source: Path, target: Path) -> list[str] | None:
     return None
 
 
-def copy_reflink(source: Path, target: Path) -> None:
+def copy_with_cp(source: Path, target: Path) -> None:
     command = reflink_command(source, target)
     if command is None:
         raise CowError(f"copy-on-write is not supported on {platform.system()}")
@@ -179,6 +192,67 @@ def copy_reflink(source: Path, target: Path) -> None:
     if result.returncode:
         detail = result.stderr.decode(errors="replace").strip()
         raise CowError(f"reflink failed: {detail}")
+
+
+def copy_with_ficlone(source: Path, target: Path, source_stat: os.stat_result) -> None:
+    if FICLONE is None:
+        raise OSError(errno.ENOSYS, "FICLONE is unavailable")
+    source_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    source_fd = os.open(source, source_flags)
+    target_fd: int | None = None
+    try:
+        target_fd = os.open(
+            target,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            stat.S_IMODE(source_stat.st_mode),
+        )
+        fcntl.ioctl(target_fd, FICLONE, source_fd)
+        os.fchmod(target_fd, stat.S_IMODE(source_stat.st_mode))
+    except BaseException:
+        try:
+            target.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+    finally:
+        if target_fd is not None:
+            os.close(target_fd)
+        os.close(source_fd)
+    os.utime(
+        target,
+        ns=(source_stat.st_atime_ns, source_stat.st_mtime_ns),
+        follow_symlinks=False,
+    )
+
+
+def native_ficlone_enabled() -> bool:
+    return platform.system() == "Linux" and FICLONE is not None and not _ficlone_disabled
+
+
+def copy_reflink(source: Path, target: Path, source_stat: os.stat_result) -> str:
+    global _ficlone_disabled
+    if native_ficlone_enabled():
+        try:
+            copy_with_ficlone(source, target, source_stat)
+            return "ficlone"
+        except OSError as error:
+            unsupported = {
+                errno.EINVAL,
+                errno.ENOSYS,
+                errno.ENOTTY,
+                errno.EOPNOTSUPP,
+                errno.EXDEV,
+            }
+            if error.errno not in unsupported:
+                raise
+            with _ficlone_lock:
+                _ficlone_disabled = True
+            try:
+                target.unlink()
+            except FileNotFoundError:
+                pass
+    copy_with_cp(source, target)
+    return "cp"
 
 
 def reset_worktree(target: Path) -> None:
@@ -276,19 +350,38 @@ def add_worktree(args: argparse.Namespace) -> int:
             and source_tree.get(path) == (mode, "blob", object_id)
         ]
         copied: set[str] = set()
+        backends: set[str] = set()
+        eligible: list[tuple[str, os.stat_result]] = []
         for path in candidates:
             source_path = source.path / path
             target_path = target / path
             source_stat = source_path.lstat()
             if not stat.S_ISREG(source_stat.st_mode):
                 continue
-            if blob_hash(source.path, source_path) != target_tree[path][2]:
-                continue
             target_path.parent.mkdir(parents=True, exist_ok=True)
-            copy_reflink(source_path, target_path)
+            eligible.append((path, source_stat))
+
+        def copy_one(item: tuple[str, os.stat_result]) -> tuple[str, str]:
+            path, source_stat = item
+            source_path = source.path / path
+            target_path = target / path
+            backend = copy_reflink(source_path, target_path, source_stat)
             if blob_hash(target, target_path) != target_tree[path][2]:
                 raise CowError(f"copied file did not match Git blob: {path}")
-            copied.add(path)
+            return path, backend
+
+        workers = min(8, max(4, os.cpu_count() or 4))
+        if len(eligible) > 1:
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                results = pool.map(copy_one, eligible)
+                for path, backend in results:
+                    copied.add(path)
+                    backends.add(backend)
+        else:
+            for item in eligible:
+                copied_path, backend = copy_one(item)
+                copied.add(copied_path)
+                backends.add(backend)
 
         if not copied:
             raise CowError("no eligible files could be reflinked")
@@ -300,7 +393,8 @@ def add_worktree(args: argparse.Namespace) -> int:
         return 0
 
     if args.verbose:
-        print(f"source={source.path} target={target} reflinked={len(copied)} fallback=no")
+        backend = "+".join(sorted(backends))
+        print(f"source={source.path} target={target} reflinked={len(copied)} backend={backend} fallback=no")
     return 0
 
 

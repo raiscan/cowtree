@@ -13,7 +13,8 @@ filesystems, cross-device paths, dirty sources, and partial failures fall back
 to a normal checkout.
 
 The implementation is a portable Python helper with no third-party runtime
-dependencies. Linux uses `cp --reflink=always`; macOS uses APFS clone support.
+dependencies. Linux uses native `FICLONE` when available and falls back to
+`cp --reflink=always`; macOS uses APFS clone support.
 
 ## Use
 

@@ -36,8 +36,9 @@ worktree index, and checks out everything that cannot be safely shared.
   symlink, submodule, filtered-content, changed, or mode-mismatched paths are
   not copied from the source.
 - Copy-on-write is attempted only when source and target are on the same
-  filesystem and the platform supports native reflinks. Unsupported or
-  cross-device cases must fall back to Git's normal checkout.
+  filesystem and the platform supports native reflinks. Linux uses native
+  `FICLONE` when exposed by Python, with `cp --reflink=always` as a fallback;
+  unsupported or cross-device cases must fall back to Git's normal checkout.
 - This optimization applies to creating a worktree only. Use Git directly for
   `list`, `lock`, `move`, `remove`, and other worktree maintenance commands.
 

@@ -48,6 +48,7 @@ test_same_tree_uses_reflinks() {
   output=$(python3 "$SCRIPT" add --from "$source" --verbose "$target" HEAD)
   assert_contains 'reflinked=' "$output"
   assert_contains 'fallback=no' "$output"
+  assert_contains 'backend=' "$output"
   assert_clean "$target"
   [[ $(cat "$target/src/shared.txt") == 'shared content' ]] || fail 'shared file content differs'
   [[ -x "$target/src/executable.sh" ]] || fail 'executable mode was not preserved'
@@ -137,4 +138,23 @@ test_dirty_source_falls_back
 test_git_dispatches_to_launcher
 test_git_launcher_forwards_branch_flag
 test_git_launcher_uses_cowtree_help_name
+
+test_source_hash_is_not_recomputed() {
+  local root source target trace hash_calls
+  root=$(mktemp -d)
+  trap 'rm -rf "$root"' RETURN
+  source=$root/source
+  target=$root/target
+  trace=$root/git-trace
+  new_repo "$source"
+  printf 'one file\n' >"$source/file.txt"
+  git -C "$source" add .
+  git -C "$source" commit -q -m initial
+
+  GIT_TRACE="$trace" python3 "$SCRIPT" add --from "$source" "$target" HEAD >/dev/null
+  hash_calls=$(grep -c 'hash-object' "$trace" || true)
+  [[ $hash_calls == 1 ]] || fail "expected one target hash-object call, got $hash_calls"
+}
+
+test_source_hash_is_not_recomputed
 printf 'PASS: cow worktree behavior\n'
